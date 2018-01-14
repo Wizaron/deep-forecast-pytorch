@@ -15,11 +15,11 @@
 
 * "data" : Stores data and scripts to prepare dataset for training.
 * "lib" : Stores miscellaneous scripts for training and testing.
-⋅⋅** "arch.py" : Defines network architecture
-⋅⋅** "model.py" : Defines model (Minibatching mechanism, optimization, criterion, fit, predict, etc.)
-⋅⋅** "prediction.py" : Metrics and plots to evaluate the performance of the trained model
-⋅⋅** "data.py" : Creates training, validation and testings datasets
-⋅⋅** "loader.py" : Creates Dataset loader for PyTorch
+	* "arch.py" : Defines network architecture
+	* "model.py" : Defines model (Minibatching mechanism, optimization, criterion, fit, predict, etc.)
+	* "prediction.py" : Metrics and plots to evaluate the performance of the trained model
+	* "data.py" : Creates training, validation and testings datasets
+	* "loader.py" : Creates Dataset loader for PyTorch
 * "train.py" : Main training script.
 * "settings.py" : Defines hyper-parameters of the model.
 
