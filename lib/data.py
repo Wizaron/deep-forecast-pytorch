@@ -1,6 +1,5 @@
 import numpy as np
 import csv
-np.random.seed(1234)
 
 class Data(object):
 
