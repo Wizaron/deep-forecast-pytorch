@@ -80,7 +80,7 @@ for i in xrange(data.shape[1] - 1):
     missing_indexes = list(empties) + list(ms)
     missing_indexes = list(set(missing_indexes))
     missing_ratio = float(len(missing_indexes)) / n_hours
-    if missing_ratio <= 0.01:
+    if missing_ratio <= 0.005:
         print i, missing_ratio
         new_header.append(header[i + 1])
         new_data.append(data[:, i + 1])

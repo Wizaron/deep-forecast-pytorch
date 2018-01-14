@@ -17,8 +17,8 @@ def convert2datetime(txt):
 dates = np.array(map(convert2datetime, data[:,1]))
 data = data[:, [0, 2]]
 
-discarded_stations = ['XNT', '6B9', 'OLE', 'MTP', 'N03', 'NY0', 'OGS']
-#discarded_stations = []
+#discarded_stations = ['XNT', '6B9', 'OLE', 'MTP', 'N03', 'NY0', 'OGS']
+discarded_stations = []
 
 stations = list(set(data[:, 0]).difference(discarded_stations))
 
