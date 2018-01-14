@@ -43,3 +43,9 @@
 ### test.py
 
 * It saves predictions under the directory of the model.
+
+## Sample Outputs
+
+<div align="center">
+<img src="https://github.com/Wizaron/deep-forecast-pytorch/blob/master/figures/0.png"><br><br>
+</div>
