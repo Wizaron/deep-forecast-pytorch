@@ -47,5 +47,17 @@
 ## Sample Outputs
 
 <div align="center">
+<img src="https://github.com/Wizaron/deep-forecast-pytorch/blob/master/figures/3.png"><br><br>
+</div>
+
+<div align="center">
+<img src="https://github.com/Wizaron/deep-forecast-pytorch/blob/master/figures/2.png"><br><br>
+</div>
+
+<div align="center">
+<img src="https://github.com/Wizaron/deep-forecast-pytorch/blob/master/figures/1.png"><br><br>
+</div>
+
+<div align="center">
 <img src="https://github.com/Wizaron/deep-forecast-pytorch/blob/master/figures/0.png"><br><br>
 </div>
