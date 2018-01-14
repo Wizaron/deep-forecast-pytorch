@@ -1,29 +1,40 @@
-import torch, os
+import torch
+import random, getpass, datetime, shutil, os, argparse
+import numpy as np
 from lib import Data, Model, Loader, draw_graph_all_stations
+from settings import Settings
 
-debug = False
-n_workers = 4
-batch_size = 256
-activation = 'relu' #sigmoid, relu, elu
-input_horizon = 12
-n_stations = 5
-train_ratio = 0.985
-learning_rate = 0.01 #0.001
-moving_horizon = 6
-n_epochs = [100, 100, 100, 100, 100, 100] if not debug else [1, 1, 1, 1, 1, 1]
-val_ratio = 0.05
-criterion = 'L1Loss' #L1Loss, MSE, SmoothL1Loss
-usegpu = False
-pin_memory = False
-if usegpu:
-    pin_memory = True
+s = Settings()
 
-model_save_path = './models/models_{}'
-output_dir = './outputs'
+parser = argparse.ArgumentParser()
+parser.add_argument('--data', help='Path of the processed dataset', type=str, required=True)
+parser.add_argument('--n_stations', help='Number of stations to use', type=int, default=5)
+parser.add_argument('--batch_size', help='Input minibatch size', type=int, default=256)
+parser.add_argument('--n_workers', help='Number of data loading workers [0 to do it using main process]', type=int, default=4)
+parser.add_argument('--usegpu', action='store_true', help='Enable cuda to train on gpu')
+parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+args = parser.parse_args()
 
-assert len(n_epochs) == moving_horizon
+if torch.cuda.is_available() and not args.usegpu:
+    print 'WARNING: You have a CUDA device, so you should probably run with --usegpu'
 
-for rnn_model_num in range(1, moving_horizon + 1):
+def generate_run_id():
+
+    username = getpass.getuser()
+
+    now = datetime.datetime.now()
+    date = map(str, [now.year, now.month, now.day])
+    coarse_time = map(str, [now.hour, now.minute])
+    fine_time = map(str, [now.second, now.microsecond])
+
+    run_id = '_'.join(['-'.join(date), '-'.join(coarse_time), username, '-'.join(fine_time)])
+    return run_id
+
+RUN_ID = generate_run_id()
+model_save_path = os.path.join('models', RUN_ID, 'models_{}')
+output_dir = os.path.join('outputs', RUN_ID)
+
+for rnn_model_num in range(1, s.MOVING_HORIZON + 1):
     try:
         os.makedirs(model_save_path.format(rnn_model_num))
     except:
@@ -34,48 +45,55 @@ try:
 except:
     pass
 
-data = Data(data_file='data/processed/turkey_2016/data_imputation_turkey.csv', input_horizon=input_horizon,
-            n_stations=n_stations, train_ratio=train_ratio,
-            val_ratio=val_ratio, debug=debug)
-model = Model(n_stations, moving_horizon, activation, criterion, usegpu=usegpu)
+pin_memory = False
+if args.usegpu:
+    pin_memory = True
 
-weight_decay = 1e-4
-clip_grad_norm = 40
-lr_drop_factor = 0.1
-lr_drop_patience = 10
-patience = 20
-optimizer = 'RMSprop'
+# Load Seeds
+random.seed(s.SEED)
+np.random.seed(s.SEED)
+torch.manual_seed(s.SEED)
 
+# Load Data
+data = Data(data_file=args.data, input_horizon=s.INPUT_HORIZON,
+            n_stations=args.n_stations, train_ratio=s.TRAIN_RATIO,
+            val_ratio=s.VAL_RATIO, debug=args.debug)
+
+# Load Model
+model = Model(args.n_stations, s.MOVING_HORIZON, s.ACTIVATION, s.CRITERION, usegpu=args.usegpu)
+
+# Train First RNN
 [X_train, y_train], [X_val, y_val], [X_test, y_test] = data.load_data_lstm_1()
 
 rnn_model_num = 1
-print '######### RNN 1 ##############'
+print '#' * 10 + ' RNN 1 ' + '#' * 10
 
-train_loader = torch.utils.data.DataLoader(Loader((X_train, y_train)), batch_size=batch_size, shuffle=True,
-                                           num_workers=n_workers, pin_memory=pin_memory)
+train_loader = torch.utils.data.DataLoader(Loader((X_train, y_train)), batch_size=args.batch_size, shuffle=True,
+                                           num_workers=args.n_workers, pin_memory=pin_memory)
 
-val_loader = torch.utils.data.DataLoader(Loader((X_val, y_val)), batch_size=batch_size, shuffle=False,
-                                         num_workers=n_workers, pin_memory=pin_memory)
+val_loader = torch.utils.data.DataLoader(Loader((X_val, y_val)), batch_size=args.batch_size, shuffle=False,
+                                         num_workers=args.n_workers, pin_memory=pin_memory)
 
-model.fit(rnn_model_num, learning_rate, weight_decay, clip_grad_norm, lr_drop_factor, lr_drop_patience, patience, 
-          optimizer, n_epochs[rnn_model_num - 1],
+model.fit(rnn_model_num, s.LEARNING_RATE, s.WEIGHT_DECAY, s.CLIP_GRAD_NORM, s.LR_DROP_FACTOR, s.LR_DROP_PATIENCE, s.PATIENCE, 
+          s.OPTIMIZER, s.N_EPOCHS[rnn_model_num - 1],
           train_loader, val_loader, model_save_path.format(rnn_model_num))
 
-for rnn_model_num in range(2, moving_horizon + 1):
+# Train Other RNNs
+for rnn_model_num in range(2, s.MOVING_HORIZON + 1):
     X_train, y_train = data.load_data(X_train, y_train, model, rnn_model_num - 1)
     X_val, y_val = data.load_data(X_val, y_val, model, rnn_model_num - 1)
-    print '######### RNN {} ##############'.format(rnn_model_num)
-    train_loader = torch.utils.data.DataLoader(Loader((X_train, y_train)), batch_size=batch_size, shuffle=True,
-                                               num_workers=n_workers, pin_memory=pin_memory)
+    print '#' * 10 + ' RNN {} '.format(rnn_model_num) + '#' * 10
+    train_loader = torch.utils.data.DataLoader(Loader((X_train, y_train)), batch_size=args.batch_size, shuffle=True,
+                                               num_workers=args.n_workers, pin_memory=pin_memory)
 
-    val_loader = torch.utils.data.DataLoader(Loader((X_val, y_val)), batch_size=batch_size, shuffle=False,
-                                             num_workers=n_workers, pin_memory=pin_memory)
+    val_loader = torch.utils.data.DataLoader(Loader((X_val, y_val)), batch_size=args.batch_size, shuffle=False,
+                                             num_workers=args.n_workers, pin_memory=pin_memory)
 
-    model.fit(rnn_model_num, learning_rate, weight_decay, clip_grad_norm, lr_drop_factor, lr_drop_patience, patience,
-              optimizer, n_epochs[rnn_model_num - 1],
+    model.fit(rnn_model_num, s.LEARNING_RATE, s.WEIGHT_DECAY, s.CLIP_GRAD_NORM, s.LR_DROP_FACTOR, s.LR_DROP_PATIENCE, s.PATIENCE,
+              s.OPTIMIZER, s.N_EPOCHS[rnn_model_num - 1],
               train_loader, val_loader, model_save_path.format(rnn_model_num))
 
-print 'TESTING ...'
-prediction_test = model.test([X_test, y_test])
 
-draw_graph_all_stations(output_dir, data, n_stations, y_test, prediction_test)
+print '\n\n' + '#' * 10 + ' TESTING ' + '#' * 10
+prediction_test = model.test([X_test, y_test])
+draw_graph_all_stations(output_dir, data, args.n_stations, y_test, prediction_test)
