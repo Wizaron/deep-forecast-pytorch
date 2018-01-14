@@ -20,7 +20,7 @@ class Model(object):
         self.usegpu = usegpu
 
         self.model = MultiLSTM(self.in_out_vec_dim, self.moving_horizon, self.activation, usegpu=self.usegpu)
-        self.__load_weights()
+        self.__load_weights(load_model_path)
         self.__define_criterion(criterion)
 
         if self.usegpu:
@@ -30,7 +30,7 @@ class Model(object):
 
         print self.model
 
-    def __load_weights(self):
+    def __load_weights(self, load_model_path):
 
         #def weights_initializer(m):
         #    """Custom weights initialization"""
@@ -39,14 +39,14 @@ class Model(object):
         #        m.weight.data.normal_(0.0, 0.001)
         #        m.bias.data.zero_()
 
-        if self.load_model_path != '':
-            assert os.path.isfile(self.load_model_path), 'Model : {} does not exists!'.format(self.load_model_path)
-            print 'Loading model from {}'.format(self.load_model_path)
+        if load_model_path != '':
+            assert os.path.isfile(load_model_path), 'Model : {} does not exists!'.format(load_model_path)
+            print 'Loading model from {}'.format(load_model_path)
 
             if self.usegpu:
-                self.model.load_state_dict(torch.load(self.load_model_path))
+                self.model.load_state_dict(torch.load(load_model_path))
             else:
-                self.model.load_state_dict(torch.load(self.load_model_path, map_location=lambda storage, loc: storage))
+                self.model.load_state_dict(torch.load(load_model_path, map_location=lambda storage, loc: storage))
 
         #else:
         #    self.model.apply(weights_initializer)
@@ -167,6 +167,8 @@ class Model(object):
     def fit(self, rnn_model_num, learning_rate, weight_decay, clip_grad_norm, lr_drop_factor, lr_drop_patience, patience, optimizer,
             n_epochs, train_loader, test_loader, model_save_path):
 
+        model_path = os.path.join(model_save_path, 'model_best.pth')
+
         training_log_file = open(os.path.join(model_save_path, 'training.log'), 'w')
         validation_log_file = open(os.path.join(model_save_path, 'validation.log'), 'w')
 
@@ -211,7 +213,7 @@ class Model(object):
             if is_best_model:
                 best_val_loss = val_loss
                 n_epochs_wo_best_model = 0
-                torch.save(self.model.state_dict(), os.path.join(model_save_path, 'model_{}_{}.pth'.format(epoch, val_loss)))
+                torch.save(self.model.state_dict(), model_path)
             else:
                 n_epochs_wo_best_model += 1
 
@@ -227,6 +229,9 @@ class Model(object):
 
         training_log_file.close()
         validation_log_file.close()
+
+        # Load best model
+        self.__load_weights(model_path)
 
     def test(self, (X_test, y_test)):
 
