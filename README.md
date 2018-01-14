@@ -21,6 +21,7 @@
 	* "data.py" : Creates training, validation and testings datasets
 	* "loader.py" : Creates Dataset loader for PyTorch
 * "train.py" : Main training script.
+* "test.py" : Main testing script.
 * "settings.py" : Defines hyper-parameters of the model.
 
 ## Data
