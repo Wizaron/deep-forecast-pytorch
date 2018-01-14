@@ -31,10 +31,15 @@
 
 ## Training and Testing
 
-* Train and test : `python train.py --data [PATH OF PREPARED DATASET]`
-* For more info : `python train.py --help`
+* Train : `python train.py --data [PATH OF PREPARED DATASET]`
+* Test : `python test.py --data [PATH OF PREPARED DATASET] --model [PATH OF THE SAVED MODEL]`
+* For more info : `python train.py --help`, `python test.py --help`
 
 ### train.py
 
 * It saves models and logs under "models"
 * At the end of the training, it saves predictions under "outputs"
+
+### test.py
+
+* It saves predictions under the directory of the model.
